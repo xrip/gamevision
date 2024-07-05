@@ -1,0 +1,56 @@
+cmake_minimum_required(VERSION 3.12)
+
+project(gamevision C CXX ASM)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+
+add_compile_options(-flto -Ofast)
+
+set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS} -funroll-loops  -ffast-math -feliminate-unused-debug-types -ffunction-sections -fdata-sections -Ofast")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -funroll-loops  -ffast-math -feliminate-unused-debug-types -ffunction-sections -fdata-sections -Ofast")
+
+set(OUTPUT_DIR "${CMAKE_SOURCE_DIR}/bin/${CMAKE_BUILD_TYPE}")
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${OUTPUT_DIR}")
+
+set(PICO_PLATFORM rp2040)
+set(BOARD pico_sdk)
+
+include(pico_sdk_import.cmake)
+
+
+pico_sdk_init()
+
+
+# INCLUDE FILES THAT SHOULD BE COMPILED:
+file(GLOB_RECURSE SRC "src/*.cpp" "src/*.c")
+
+message(STATUS "Adding source files:")
+foreach (SRC_FILE IN LISTS SRC)
+	message(STATUS "${SRC_FILE}")
+endforeach ()
+message(STATUS "")
+
+add_executable(${PROJECT_NAME} ${SRC})
+
+
+target_link_libraries(${PROJECT_NAME}
+        pico_stdlib
+        pico_runtime
+        pico_multicore
+)
+
+pico_define_boot_stage2(slower_boot2 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
+target_compile_definitions(slower_boot2 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
+pico_set_boot_stage2(${PROJECT_NAME} slower_boot2)
+
+# Run from SRAM
+set(PICO_DEFAULT_BINARY_TYPE copy_to_ram)
+
+pico_enable_stdio_usb(${PROJECT_NAME} 0)
+pico_enable_stdio_uart(${PROJECT_NAME} 0)
+pico_add_extra_outputs(${PROJECT_NAME})
+
+target_link_options(${PROJECT_NAME} PRIVATE -Xlinker --print-memory-usage --data-sections --function-sections)
