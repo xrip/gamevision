@@ -1,12 +1,14 @@
 build
 uf2
 bin
+.idea
 cmake-*
 fh.log
 /pimoroni-pico/
 build
 # Prerequisites
 *.d
+
 
 # Compiled Object files
 *.slo
