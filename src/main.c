@@ -205,6 +205,7 @@ int __time_critical_func(main)() {
     sem_release(&vga_start_semaphore);
     gpio_put(PICO_DEFAULT_LED_PIN, true);
 
+    rom[0x70FF]=0;
     while (1) {
         const uint32_t data = gpio_get_all();
         const uint32_t oe = data & READMASK;
