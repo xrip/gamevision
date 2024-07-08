@@ -9,6 +9,7 @@
 
 #include "watara_rom.h"
 #include "gb_cart.h"
+#include "sound/minigb_apu.h"
 
 // Pin Definitions.
 #define A0 0
@@ -156,6 +157,8 @@ void __not_in_flash_func(lcd_draw_line)(struct gb_s *gb, const uint8_t pixels[16
                 (pixels[x + 3] & 3) | ((pixels[x + 2] & 3) << 2) | ((pixels[x + 1] & 3) << 4) | ((pixels[x] & 3) << 6);
 }
 
+int16_t audio_stream[AUDIO_BUFFER_SIZE_BYTES] = { 0 };
+
 void __time_critical_func(second_core)() {
     sem_acquire_blocking(&vga_start_semaphore);
 
@@ -173,9 +176,20 @@ void __time_critical_func(second_core)() {
     int frame_cnt = 0;
     int frame_timer_start = 0;
 
+
+    // Initialize audio emulation
+    audio_init();
+
     while (1) {
         gb_run_frame(&gb);
-        gb.direct.joypad = ((control >> 4)  & 0xF) | ((control << 4)  & 0x30) |  ((control << 5)  & 0x80) |  ((control << 3)  & 0x40);
+
+        audio_callback(NULL, audio_stream, AUDIO_BUFFER_SIZE_BYTES);
+
+        // 738*2 байт 8итный буфер для ватары, сразу за видео буфером
+        for (int i = 0; i < AUDIO_SAMPLES*2; i+=2){
+            rom[0 + i+(BITMAP_OFFEST+160*48)] = audio_stream[i] >> 8;
+            rom[1 + i+(BITMAP_OFFEST+160*48)] = audio_stream[i+1] >> 8;
+        }
 
         if (true) {
             if (++frame_cnt == 6) {
@@ -215,6 +229,7 @@ int __time_critical_func(main)() {
             const uint32_t address = data & ADDRMASK;
             if (address >= 0x7000 && address <= 0x70FF) {
                 control = address & 0xFF;
+                gb.direct.joypad = ((control >> 4)  & 0xF) | ((control << 4)  & 0x30) |  ((control << 5)  & 0x80) |  ((control << 3)  & 0x40);
                 //gb.direct.joypad = ((control >> 4)  & 0xF) | ((control << 4)  & 0x30) |  ((control << 5)  & 0x80) |  ((control << 3)  & 0x40);
                 //gb.direct.joypad = temp;
                 //gb.direct.joypad_bits.start = 1;
