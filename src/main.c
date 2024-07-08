@@ -51,8 +51,8 @@
 
 struct semaphore vga_start_semaphore;
 struct gb_s gb;
-uint8_t SCREEN[160 * 160 / 4] = {0};
 
+uint8_t control;
 
 void initGPIO() {
     // Set pin directions.
@@ -175,6 +175,7 @@ void __time_critical_func(second_core)() {
 
     while (1) {
         gb_run_frame(&gb);
+        gb.direct.joypad = ((control >> 4)  & 0xF) | ((control << 4)  & 0x30) |  ((control << 5)  & 0x80) |  ((control << 3)  & 0x40);
 
         if (true) {
             if (++frame_cnt == 6) {
@@ -212,9 +213,10 @@ int __time_critical_func(main)() {
         if (false == oe) {
             const uint32_t address = data & ADDRMASK;
             if (address >= 0x7000 && address <= 0x70FF) {
-                uint8_t control = address & 0xFF;
-                gb.direct.joypad = ((control >> 4)  & 0xF) | ((control << 4)  & 0x30) |  ((control << 5)  & 0x80) |  ((control << 3)  & 0x40);
+                control = address & 0xFF;
+                //gb.direct.joypad = ((control >> 4)  & 0xF) | ((control << 4)  & 0x30) |  ((control << 5)  & 0x80) |  ((control << 3)  & 0x40);
                 //gb.direct.joypad = temp;
+                //gb.direct.joypad_bits.start = 1;
             }
 
             const uint8_t romByte = rom[address];
