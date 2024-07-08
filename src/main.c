@@ -205,16 +205,16 @@ int __time_critical_func(main)() {
     gpio_put(PICO_DEFAULT_LED_PIN, true);
 
     while (1) {
-        const unsigned int data = gpio_get_all();
-        const unsigned int oe = data & READMASK;
+        const uint32_t data = gpio_get_all();
+        const uint32_t oe = data & READMASK;
 
         (oe ? gpio_set_dir_in_masked(DATAMASK) : gpio_set_dir_out_masked(DATAMASK));
         if (false == oe) {
-            const unsigned int address = data & ADDRMASK;
-            if (address >= 0x2000 && address <= 0x20FF) {
-                unsigned char control = address & 0xff;
-                //gb.direct.joypad = ((control >> 4)  & 0xF) | ((control << 4)  & 0x30) |  ((control << 5)  & 0x80) |  ((control << 3)  & 0x40);
-                gb.direct.joypad = control;
+            const uint32_t address = data & ADDRMASK;
+            if (address >= 0x7000 && address <= 0x70FF) {
+                uint8_t control = address & 0xFF;
+                gb.direct.joypad = ((control >> 4)  & 0xF) | ((control << 4)  & 0x30) |  ((control << 5)  & 0x80) |  ((control << 3)  & 0x40);
+                //gb.direct.joypad = temp;
             }
 
             const uint8_t romByte = rom[address];

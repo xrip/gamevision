@@ -34,12 +34,6 @@ void main(void)
         SV_DMA_BUFFER.lenght = 0xD8;
         SV_DMA_BUFFER.control = 0x80;
 
-        if (~SV_CONTROL)
-        {
-            SV_DMA_BUFFER.source = 0xA000 | (SV_CONTROL << 4);
-            SV_DMA_BUFFER.destination = (int)SV_VIDEO + 0x1C00;
-            SV_DMA_BUFFER.lenght = 0x1;
-            SV_DMA_BUFFER.control = 0x80;
-        }
+        memcpy(SV_VIDEO + 0x1B00, (char *)(0xF000 | SV_CONTROL), 1);
     }
 }
