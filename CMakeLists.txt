@@ -5,6 +5,8 @@ project(gamevision C CXX ASM)
 SET(BUILD_NAME "${PROJECT_NAME}")
 
 
+SET(CC65_HOME "e:/cc65")
+
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
@@ -32,6 +34,17 @@ message(STATUS "")
 
 add_executable(${PROJECT_NAME} ${SRC})
 
+
+
+
+add_custom_target(build_watara_rom ALL
+		COMMAND "${CC65_HOME}/bin/cl65" -t supervision -O -o main.sv main.c &&
+				python ../utils/bin2c.py main.sv ../src/watara_rom.h
+		WORKING_DIRECTORY "../cc65"
+		COMMENT "Building WATARA rom"
+)
+
+add_dependencies(${PROJECT_NAME} build_watara_rom)
 pico_define_boot_stage2(slower_boot2 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
 target_compile_definitions(slower_boot2 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
 pico_set_boot_stage2(${PROJECT_NAME} slower_boot2)
