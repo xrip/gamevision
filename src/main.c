@@ -4,7 +4,7 @@
 #include <pico/sync.h>
 #include <hardware/structs/vreg_and_chip_reset.h>
 
-
+#define ENABLE_SOUND 1
 #include "peanut_gb.h"
 
 #include "watara_rom.h"
