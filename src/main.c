@@ -4,12 +4,12 @@
 #include <pico/sync.h>
 #include <hardware/structs/vreg_and_chip_reset.h>
 
-#define ENABLE_SOUND 1
+#include "sound/minigb_apu.h"
 #include "peanut_gb.h"
 
 #include "watara_rom.h"
 #include "gb_cart.h"
-#include "sound/minigb_apu.h"
+
 
 // Pin Definitions.
 #define A0 0

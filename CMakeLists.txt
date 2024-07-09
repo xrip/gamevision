@@ -55,7 +55,7 @@ set(BOARD pico_sdk)
 pico_set_program_name(${PROJECT_NAME} "Gameboy emulator for Watara Supervision")
 pico_set_program_version(${PROJECT_NAME} "develop")
 
-target_include_directories(${PROJECT_NAME} PRIVATE src)
+target_include_directories(${PROJECT_NAME} PRIVATE src )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${BUILD_NAME}")
 
@@ -67,6 +67,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
 		PICO_FLASH_SIZE_BYTES=16777216
+		ENABLE_SOUND=1
 )
 
 target_link_options(${PROJECT_NAME} PRIVATE -Xlinker --print-memory-usage --data-sections)
