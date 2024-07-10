@@ -186,9 +186,8 @@ void __time_critical_func(second_core)() {
         audio_callback(NULL, audio_stream, AUDIO_BUFFER_SIZE_BYTES);
 
         // 738*2 байт 8итный буфер для ватары, сразу за видео буфером
-        for (int i = 0; i < AUDIO_SAMPLES*2; i+=2){
-            rom[0 + i+(BITMAP_OFFEST+160*48)] = (audio_stream[i] >> 12) << 4;
-            rom[1 + i+(BITMAP_OFFEST+160*48)] = (audio_stream[i+1] >> 12) << 4;
+        for (int i = 0; i < AUDIO_SAMPLES*2; i+=4){
+            rom[(i / 4)+(BITMAP_OFFEST+160*48)] = ((audio_stream[i]) >> 12) << 4 | ((audio_stream[i+2]) >> 12);
         }
 
         if (true) {

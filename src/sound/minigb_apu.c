@@ -373,8 +373,8 @@ void audio_callback(void *userdata, int16_t *stream, size_t len)
 
 	update_square(stream, 0);
 	update_square(stream, 1);
-	update_wave(stream);
-	update_noise(stream);
+	//update_wave(stream);
+	//update_noise(stream);
 }
 
 static void chan_trigger(uint_fast8_t i)
