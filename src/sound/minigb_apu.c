@@ -223,9 +223,9 @@ static void update_square(int16_t* samples, const bool ch2)
 
 		sample += c->val;
 		sample *= c->volume;
-		sample /= 8;
+		//sample /= 4;
 
-		samples[i + 0] += (((sample * c->on_left * vol_l) + (sample * c->on_right * vol_r)) );
+		samples[i + 0] += (((sample * c->on_left * vol_l) + (sample * c->on_right * vol_r)) / 8);
 		samples[i + 1] += sample * c->on_right * vol_r;
 	}
 }
