@@ -10,7 +10,7 @@ SET(CC65_HOME "e:/cc65")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-add_compile_options(-flto)
+add_compile_options(-flto -fwhole-program)
 set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
 set(CMAKE_C_FLAGS   "${CMAKE_C_FLAGS}   -ffast-math -feliminate-unused-debug-types -ffunction-sections -fdata-sections -O2")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  -ffast-math -feliminate-unused-debug-types -ffunction-sections -fdata-sections -O2")
@@ -66,6 +66,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
+		PICO_PANIC_FUNCTION=dummy_panic
 		PICO_FLASH_SIZE_BYTES=16777216
 		ENABLE_SOUND=1
 )

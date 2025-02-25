@@ -1,4 +1,5 @@
 #pragma GCC optimize("Ofast")
+#include <pico.h>
 #include <pico/multicore.h>
 #include "pico/stdlib.h"
 #include <pico/sync.h>
@@ -9,6 +10,7 @@
 
 #include "watara_rom.h"
 #include "gb_cart.h"
+#include "hardware/clocks.h"
 
 
 // Pin Definitions.
@@ -186,8 +188,8 @@ void __time_critical_func(second_core)() {
         audio_callback(NULL, audio_stream, AUDIO_BUFFER_SIZE_BYTES);
 
         // 738*2 байт 8итный буфер для ватары, сразу за видео буфером
-        for (int i = 0; i < AUDIO_SAMPLES*2; i+=4){
-            rom[(i / 4)+(BITMAP_OFFEST+160*48)] = ((audio_stream[i]) >> 12) << 4 | ((audio_stream[i+2]) >> 12);
+        for (int i = 0; i < AUDIO_SAMPLES; i+=2){
+            rom[(i / 2)+(BITMAP_OFFEST+160*48)] = ((audio_stream[i]) >> 12) << 4 | ((audio_stream[i+1]) >> 12);
         }
 
         if (true) {
@@ -207,6 +209,10 @@ static inline bool overclock() {
     sleep_ms(10);
     return set_sys_clock_khz(378 * 1000, true);
 }
+void __attribute__((naked, noreturn)) __printflike(1, 0) dummy_panic(__unused const char *fmt, ...) {
+    // don't panic, all right!
+}
+
 
 int __time_critical_func(main)() {
     overclock();

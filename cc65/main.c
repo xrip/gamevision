@@ -28,7 +28,7 @@ void main(void)
     memset(SV_VIDEO, 0, 0x8000);
 
     SV_DMA.start = 0xDE00;
-    SV_DMA.size = 23;
+    SV_DMA.size = 23; // 23*16
     SV_DMA.control = 0b00001100;
     SV_DMA.on = 0x80;
 
