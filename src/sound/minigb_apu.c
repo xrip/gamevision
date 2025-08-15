@@ -195,7 +195,7 @@ static void update_square(int16_t* samples, const bool ch2)
 	set_note_freq(c, freq);
 	c->freq_inc *= 8;
 
-	for (uint_fast16_t i = 0; i < AUDIO_SAMPLES; i ++) {
+	for (uint_fast16_t i = 0; i < AUDIO_NSAMPLES; i += 2) {
 		update_len(c);
 
 		if (!c->enabled)
@@ -223,10 +223,10 @@ static void update_square(int16_t* samples, const bool ch2)
 
 		sample += c->val;
 		sample *= c->volume;
-		//sample /= 4;
+		sample /= 8;
 
-		samples[i + 0] += (((sample * c->on_left * vol_l) + (sample * c->on_right * vol_r)) / 8);
-		//samples[i + 1] += sample * c->on_right * vol_r;
+		samples[i + 0] += (((sample * c->on_left * vol_l) + (sample * c->on_right * vol_r)) );
+		samples[i + 1] += sample * c->on_right * vol_r;
 	}
 }
 

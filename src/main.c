@@ -1,120 +1,34 @@
 #pragma GCC optimize("Ofast")
-#include <pico.h>
 #include <pico/multicore.h>
 #include "pico/stdlib.h"
 #include <pico/sync.h>
 #include <hardware/structs/vreg_and_chip_reset.h>
+#include <hardware/clocks.h>
 
 #include "sound/minigb_apu.h"
 #include "peanut_gb.h"
 
 #include "watara_rom.h"
 #include "gb_cart.h"
-#include "hardware/clocks.h"
 
 
-// Pin Definitions.
-#define A0 0
-#define A1 1
-#define A2 2
-#define A3 3
-#define A4 4
-#define A5 5
-#define A6 6
-#define A7 7
-#define A8 8
-#define A9 9
-#define A10 10
-#define A11 11
-#define A12 12
-#define A13 13
-#define A14 14
-#define A15 15
-#define A16 16
+// Address Bus (A0 - A16)
+#define ADDR_MASK 0x1FFFF  // Bits 0-16
 
-#define D0 27
-#define D1 26
-#define D2 22
-#define D3 21
-#define D4 20
-#define D5 19
-#define D6 18
-#define D7 17
+// Data Bus (D0 - D7)
+#define DATA_MASK (0xFF << 17)
 
-#define NWR 28
+// /RD
+#define RD_PIN  29
+#define READ_MASK (1u << RD_PIN)
 
 #define BITMAP_OFFEST 0x4000
-
-#define DATAOFFSETLOW 17
-#define DATAOFFSETHIGH 20
-
-// Bit masks
-#define DATAMASK 0b01100011111100000000000000000
-#define READMASK 0b10000000000000000000000000000
+#define AUDIO_OFFSET 0x5E00
+#define CONTROL_OFFEST 0x6F00
 
 struct semaphore vga_start_semaphore;
 struct gb_s gb;
-
-uint8_t control;
-
-void initGPIO() {
-    // Set pin directions.
-    gpio_init(A0);
-    gpio_set_dir(A0, GPIO_IN);
-    gpio_init(A1);
-    gpio_set_dir(A1, GPIO_IN);
-    gpio_init(A2);
-    gpio_set_dir(A2, GPIO_IN);
-    gpio_init(A3);
-    gpio_set_dir(A3, GPIO_IN);
-    gpio_init(A4);
-    gpio_set_dir(A4, GPIO_IN);
-    gpio_init(A5);
-    gpio_set_dir(A5, GPIO_IN);
-    gpio_init(A6);
-    gpio_set_dir(A6, GPIO_IN);
-    gpio_init(A7);
-    gpio_set_dir(A7, GPIO_IN);
-    gpio_init(A8);
-    gpio_set_dir(A8, GPIO_IN);
-    gpio_init(A9);
-    gpio_set_dir(A9, GPIO_IN);
-    gpio_init(A10);
-    gpio_set_dir(A10, GPIO_IN);
-    gpio_init(A11);
-    gpio_set_dir(A11, GPIO_IN);
-    gpio_init(A12);
-    gpio_set_dir(A12, GPIO_IN);
-    gpio_init(A13);
-    gpio_set_dir(A13, GPIO_IN);
-    gpio_init(A14);
-    gpio_set_dir(A14, GPIO_IN);
-    gpio_init(A15);
-    gpio_set_dir(A15, GPIO_IN);
-    gpio_init(A16);
-    gpio_set_dir(A16, GPIO_IN);
-
-    gpio_init(NWR);
-    gpio_set_dir(NWR, GPIO_IN);
-
-    // Initially, set the pins to IN
-    gpio_init(D0);
-    gpio_set_dir(D0, GPIO_IN);
-    gpio_init(D1);
-    gpio_set_dir(D1, GPIO_IN);
-    gpio_init(D2);
-    gpio_set_dir(D2, GPIO_IN);
-    gpio_init(D3);
-    gpio_set_dir(D3, GPIO_IN);
-    gpio_init(D4);
-    gpio_set_dir(D4, GPIO_IN);
-    gpio_init(D5);
-    gpio_set_dir(D5, GPIO_IN);
-    gpio_init(D6);
-    gpio_set_dir(D6, GPIO_IN);
-    gpio_init(D7);
-    gpio_set_dir(D7, GPIO_IN);
-}
+volatile uint8_t control = 0xFF;
 
 /**
  * Returns a byte from the ROM file at the given address.
@@ -122,19 +36,19 @@ void initGPIO() {
 uint8_t __not_in_flash_func(gb_rom_read)(struct gb_s *gb, const uint_fast32_t addr) {
     return gb_cart[addr];
 }
-
+static uint8_t cart_ram[32768];
 /**
  * Returns a byte from the cartridge RAM at the given address.
  */
 uint8_t __not_in_flash_func(gb_cart_ram_read)(struct gb_s *gb, const uint_fast32_t addr) {
-    //  return cart_ram[addr];
+    return cart_ram[addr];
 }
 
 /**
  * Writes a given byte to the cartridge RAM at the given address.
  */
 void __not_in_flash_func(gb_cart_ram_write)(struct gb_s *gb, const uint_fast32_t addr, const uint8_t val) {
-    //    cart_ram[addr] = val;
+    cart_ram[addr] = val;
 }
 
 /**
@@ -156,12 +70,27 @@ void __not_in_flash_func(lcd_draw_line)(struct gb_s *gb, const uint8_t pixels[16
                    const uint_fast8_t line) {
     for (unsigned int x = 0; x < LCD_WIDTH; x += 4)
         rom[BITMAP_OFFEST + line * 48 + x / 4] =
-                (pixels[x + 3] & 3) | ((pixels[x + 2] & 3) << 2) | ((pixels[x + 1] & 3) << 4) | ((pixels[x] & 3) << 6);
+                ((pixels[x + 3] & 3) << 6) | ((pixels[x + 2] & 3) << 4) | ((pixels[x + 1] & 3) << 2) | ((pixels[x] & 3));
 }
 
-int16_t audio_stream[AUDIO_BUFFER_SIZE_BYTES] = { 0 };
+
+volatile uint8_t gamepad_state = 0xff;
+static inline uint8_t supervision_to_gameboy(uint8_t state) {
+    // Output layout (bit positions):
+    // 0:A, 1:B, 2:SELECT, 3:START, 4:RIGHT, 5:LEFT, 6:UP, 7:DOWN
+    return
+        (state & 0x20) >> 5 |  // A      (bit5 -> bit0)
+        (state & 0x10) >> 3 |  // B      (bit4 -> bit1)
+        (state & 0x40) >> 4 |  // SELECT (bit6 -> bit2)
+        (state & 0x80) >> 4 |  // START  (bit7 -> bit3)
+        (state & 0x01) << 4 |  // RIGHT  (bit0 -> bit4)
+        (state & 0x02) << 4 |  // LEFT   (bit1 -> bit5)
+        (state & 0x08) << 3 |  // UP     (bit3 -> bit6)
+        (state & 0x04) << 5;   // DOWN   (bit2 -> bit7)
+}
 
 void __time_critical_func(second_core)() {
+    int16_t audio_stream[AUDIO_BUFFER_SIZE_BYTES];
     sem_acquire_blocking(&vga_start_semaphore);
 
 
@@ -169,27 +98,25 @@ void __time_critical_func(second_core)() {
     const enum gb_init_error_e ret = gb_init(&gb, &gb_rom_read, &gb_cart_ram_read,
                                              &gb_cart_ram_write, &gb_error, NULL);
 
-    while (ret != GB_INIT_NO_ERROR) {
-        gpio_put(PICO_DEFAULT_LED_PIN, true);
-    }
 
     gb_init_lcd(&gb, &lcd_draw_line);
 
-    int frame_cnt = 0;
-    int frame_timer_start = 0;
+    unsigned int frame_cnt = 0;
+    unsigned int frame_timer_start = 0;
 
 
     // Initialize audio emulation
     audio_init();
 
     while (1) {
+        gb.direct.joypad = supervision_to_gameboy(gamepad_state);
+
         gb_run_frame(&gb);
 
         audio_callback(NULL, audio_stream, AUDIO_BUFFER_SIZE_BYTES);
-
         // 738*2 байт 8итный буфер для ватары, сразу за видео буфером
-        for (int i = 0; i < AUDIO_SAMPLES; i+=2){
-            rom[(i / 2)+(BITMAP_OFFEST+160*48)] = ((audio_stream[i]) >> 12) << 4 | ((audio_stream[i+1]) >> 12);
+        for (int i = 0; i < AUDIO_SAMPLES*2; i+=4){
+            rom[(i >> 2) + AUDIO_OFFSET] = (audio_stream[i] >> 12) | (audio_stream[i+2] >> 8);
         }
 
         if (true) {
@@ -204,48 +131,39 @@ void __time_critical_func(second_core)() {
     }
 }
 
-static inline bool overclock() {
+
+
+void __time_critical_func(handle_bus)() {
+    uint8_t cntr = 0;
+    while (true) {
+        while (gpio_get_all() & READ_MASK);
+
+        const uint32_t address = gpio_get_all() & 0x7fff ;
+
+        if (address >= CONTROL_OFFEST && address <= (CONTROL_OFFEST+0xFF)) {
+            gamepad_state = (address - CONTROL_OFFEST) & 0xff;
+        } else {
+            gpio_set_dir_out_masked(DATA_MASK);
+            gpio_put_all(rom[address] << 17);
+            gpio_set_dir_in_masked(DATA_MASK);
+        }
+    }
+}
+
+int main() {
+    // Set the system clock speed.
     hw_set_bits(&vreg_and_chip_reset_hw->vreg, VREG_AND_CHIP_RESET_VREG_VSEL_BITS);
-    sleep_ms(10);
-    return set_sys_clock_khz(378 * 1000, true);
-}
-void __attribute__((naked, noreturn)) __printflike(1, 0) dummy_panic(__unused const char *fmt, ...) {
-    // don't panic, all right!
-}
+    sleep_us(35);
+    set_sys_clock_hz(400 * MHZ, true); // 100x of Watara Supervision clock speed
 
-
-int __time_critical_func(main)() {
-    overclock();
-
-    initGPIO();
+    // Initialize all input pins at once
+    gpio_init_mask(ADDR_MASK | DATA_MASK | READ_MASK);
+    gpio_set_dir_in_masked(ADDR_MASK | DATA_MASK | READ_MASK);
 
     sem_init(&vga_start_semaphore, 0, 1);
     multicore_launch_core1(second_core);
     sem_release(&vga_start_semaphore);
-    gpio_put(PICO_DEFAULT_LED_PIN, true);
-
-    rom[0x70FF]=0;
-    while (1) {
-        const uint32_t data = gpio_get_all();
-        const uint32_t oe = data & READMASK;
-
-        (oe ? gpio_set_dir_in_masked(DATAMASK) : gpio_set_dir_out_masked(DATAMASK));
-        if (false == oe) {
-            const uint32_t address = data & ADDRMASK;
-            if (address >= 0x7000 && address <= 0x70FF) {
-                control = address & 0xFF;
-                gb.direct.joypad = ((control >> 4)  & 0xF) | ((control << 4)  & 0x30) |  ((control << 5)  & 0x80) |  ((control << 3)  & 0x40);
-                //gb.direct.joypad = ((control >> 4)  & 0xF) | ((control << 4)  & 0x30) |  ((control << 5)  & 0x80) |  ((control << 3)  & 0x40);
-                //gb.direct.joypad = temp;
-                //gb.direct.joypad_bits.start = 1;
-            }
-
-            const uint8_t romByte = rom[address];
-
-            gpio_put_all((romByte & 0b00111111) << DATAOFFSETLOW |
-                                        (romByte & 0b11000000) << DATAOFFSETHIGH);
-        }
-    }
-
+    for (int i = 0; i< 0xff; i++ ) rom[0x300 + i] = i;
+    handle_bus();
     return 0;
 }
