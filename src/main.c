@@ -163,7 +163,7 @@ int main() {
     sem_init(&vga_start_semaphore, 0, 1);
     multicore_launch_core1(second_core);
     sem_release(&vga_start_semaphore);
-    for (int i = 0; i< 0xff; i++ ) rom[0x300 + i] = i;
+
     handle_bus();
     return 0;
 }
