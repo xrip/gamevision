@@ -63,6 +63,10 @@ The project is built using CMake. The following steps are required to build the 
 
 8.  **Flash the UF2 file to the Raspberry Pi Pico.** You can do this by holding down the BOOTSEL button on the Pico while plugging it into your computer. It will then appear as a mass storage device, and you can drag and drop the UF2 file onto it.
 
+## Peanut GB
+
+This project uses the [Peanut GB](https://github.com/deltabeard/Peanut-GB) emulator library. The source code for the library is included in this repository.
+
 ## Contributing
 
 Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue on the [GitHub repository](https://github.com/your-username/gamevision/issues).
