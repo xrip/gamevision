@@ -67,6 +67,12 @@ The project is built using CMake. The following steps are required to build the 
 
 Contributions are welcome! If you have any ideas, suggestions, or bug reports, please open an issue on the [GitHub repository](https://github.com/your-username/gamevision/issues).
 
+## Credits
+
++ Hardware design: Sa Gin
++ Software: xrip, [vrodin](https://github.com/vrodin)
++ Beta testing: Oleg
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
