@@ -21,7 +21,7 @@ with open( srcFile, "rb" ) as f:
   while ( curByte != b"" ):
     tmpInt = int.from_bytes( curByte, "big" )
     # Reverse the bit order.
-    tmpInt = int( '{:08b}'.format(tmpInt)[::-1], 2 )
+    #tmpInt = int( '{:08b}'.format(tmpInt)[::-1], 2 )
     # Convert to hex string.
     outStr.append( format( tmpInt, '#04x' ) )
     
