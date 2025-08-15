@@ -15,9 +15,9 @@ GameVision is a Game Boy emulator that runs on a Raspberry Pi Pico and uses the 
 
 ## Hardware Requirements
 
-*   **Raspberry Pi Pico:** The heart of the project.
+*   **Purple Chinese RP2040 clone:** This is strictly needed. You can find it on AliExpress.
 *   **Watara Supervision:** The display and controller for the emulator.
-*   **A way to connect the Raspberry Pi Pico to the Watara Supervision's cartridge slot.** This can be done by creating a custom PCB or by using a prototyping board.
+*   **watapico Watara flash cartridge:** The hardware used to connect the RP2040 to the Watara Supervision. You can find the details on the [watapico GitHub repository](https://github.com/xrip/watapico).
 
 ## RP2040 Pinout
 
