@@ -1,6 +1,7 @@
 # GameVision: Game Boy Emulator for Watara Supervision
 
-![GameVision](https://i.imgur.com/5l2vQ3a.png)
+
+[![GameVision running Wario Land](https://img.youtube.com/vi/Bpv42_TeBiA/0.jpg)](https://www.youtube.com/shorts/Bpv42_TeBiA)
 
 **Bring your old Watara Supervision back to life with the power of the Raspberry Pi Pico!**
 
