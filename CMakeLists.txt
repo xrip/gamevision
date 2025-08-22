@@ -39,7 +39,7 @@ add_executable(${PROJECT_NAME} ${SRC})
 
 
 add_custom_target(build_watara_rom ALL
-		COMMAND "${CC65_HOME}/bin/cl65" -t supervision -o main.sv main.c &&
+		COMMAND cl65 -t supervision -I "../cc65" -o main.sv main.c &&
 				python3 ../utils/bin2c.py main.sv ../src/watara_rom.h
 		WORKING_DIRECTORY "../cc65"
 		COMMENT "Building WATARA rom"
@@ -76,6 +76,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 		PICO_PANIC_FUNCTION=
 )
 
+pico_set_linker_script(${PROJECT_NAME} ${CMAKE_CURRENT_LIST_DIR}/memmap_watapico.ld)
 
 target_link_options(${PROJECT_NAME} PRIVATE -Xlinker --print-memory-usage --data-sections)
 pico_add_extra_outputs(${PROJECT_NAME})

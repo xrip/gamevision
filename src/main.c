@@ -9,7 +9,7 @@
 #include "peanut_gb.h"
 
 #include "watara_rom.h"
-#include "gb_cart.h"
+#include "./roms/roms.h"
 
 
 // Address Bus (A0 - A16)
@@ -28,13 +28,15 @@
 
 struct semaphore vga_start_semaphore;
 struct gb_s gb;
-volatile uint8_t control = 0xFF;
+volatile uint8_t current_gb_rom = 0;
+
+volatile bool isMenu = true;
 
 /**
  * Returns a byte from the ROM file at the given address.
  */
 uint8_t __not_in_flash_func(gb_rom_read)(struct gb_s *gb, const uint_fast32_t addr) {
-    return gb_cart[addr];
+    return rom_entries[current_gb_rom].data[addr];
 }
 static uint8_t cart_ram[32768];
 /**
@@ -90,10 +92,10 @@ static inline uint8_t supervision_to_gameboy(uint8_t state) {
 }
 
 void __time_critical_func(second_core)() {
+    while (isMenu);
     int16_t audio_stream[AUDIO_BUFFER_SIZE_BYTES];
     sem_acquire_blocking(&vga_start_semaphore);
-
-
+    
     /* Initialise GB context. */
     const enum gb_init_error_e ret = gb_init(&gb, &gb_rom_read, &gb_cart_ram_read,
                                              &gb_cart_ram_write, &gb_error, NULL);
@@ -107,7 +109,7 @@ void __time_critical_func(second_core)() {
 
     // Initialize audio emulation
     audio_init();
-
+    
     while (1) {
         gb.direct.joypad = supervision_to_gameboy(gamepad_state);
 
@@ -134,19 +136,23 @@ void __time_critical_func(second_core)() {
 
 
 void __time_critical_func(handle_bus)() {
-    uint8_t cntr = 0;
+    uint8_t cntr = 0;  
     while (true) {
         while (gpio_get_all() & READ_MASK);
 
         const uint32_t address = gpio_get_all() & 0x7fff ;
-
+        gpio_set_dir_out_masked(DATA_MASK);
+        gpio_put_all(rom[address] << 17);
+        
         if (address >= CONTROL_OFFEST && address <= (CONTROL_OFFEST+0xFF)) {
             gamepad_state = (address - CONTROL_OFFEST) & 0xff;
-        } else {
-            gpio_set_dir_out_masked(DATA_MASK);
-            gpio_put_all(rom[address] << 17);
-            gpio_set_dir_in_masked(DATA_MASK);
-        }
+            if(isMenu) {
+                current_gb_rom = (gamepad_state - 1) % ROM_COUNT;
+                isMenu = false;
+            }
+            
+        }  
+        gpio_set_dir_in_masked(DATA_MASK);
     }
 }
 
@@ -164,6 +170,8 @@ int main() {
     multicore_launch_core1(second_core);
     sem_release(&vga_start_semaphore);
 
+    rom[0x1100] = ROM_COUNT;
+    memcpy(&rom[0x1101], (uint8_t *) &rom_entries, sizeof(RomEntry) * ROM_COUNT);
     handle_bus();
     return 0;
 }
